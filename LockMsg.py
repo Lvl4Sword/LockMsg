@@ -11,7 +11,7 @@ from ssl import Purpose
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '0.8.0'
+__module_version__ = '0.8.1'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
 
 # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
@@ -96,11 +96,9 @@ class Main():
             print('LockMsg.py is improperly setup.')
             print('Use ls -la /usr/bin | grep screensaver-command')
         else:
-            cmd = subprocess.Popen([linux_command, '--query'], shell=False,
-                                    stdout=subprocess.PIPE)
-            line = cmd.stdout.readline()
-            cmd.kill()
-            if b'The screensaver is active' in line:
+            cmd = subprocess.check_output([linux_command, '--query'], shell=False)
+            cmd = cmd.decode('utf-8').strip()
+            if cmd == 'The screensaver is active':
                 self.locked = True
             else:
                 self.locked = False
