@@ -11,7 +11,7 @@ from ssl import Purpose
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '0.8.1'
+__module_version__ = '0.8.2'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
 
 # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
@@ -171,7 +171,7 @@ class Main():
                                                                   hexchat.strip(word[1], -1, 3))
                     self.mail_this()
 
-    def connected(self, word, world_eol, userdata):
+    def connected(self, word, word_eol, userdata):
         self.detect_lock_screen(word, word_eol, userdata)
         if self.locked:
             self.was_said = '[{0}] [CONNECTED]'.format(self.formatted_time)
