@@ -11,7 +11,7 @@ from ssl import Purpose
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '0.8.2'
+__module_version__ = '0.8.3'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
 
 # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
@@ -31,7 +31,7 @@ login_cloaks = ['unaffiliated/example']
 # ['channels']['notify'] + ['users'] = no notifcations from them at all
 # ( unless you have them on login_cloaks )
 blacklisted = {'channels': {'#example': ['example', 'example2'],
-                            '#example2': ['example3']}
+                            '#example2': ['example3'],
                             'notify': ['example4']},
                'users': ['example5']}
 
