@@ -11,15 +11,12 @@ from ssl import Purpose
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '0.8.3'
+__module_version__ = '0.9.0'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
 
 # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
 # used in format_message for self.current_time 
 timezone = 'US/Eastern'
-
-# expecting something like 'cinnamon-screensaver-command'
-linux_command = ''
 
 # cloaks to pay attention to
 login_cloaks = ['unaffiliated/example']
@@ -92,16 +89,35 @@ class Main():
             self.locked = False
 
     def detect_linux(self, word, word_eol, userdata):
-        if not linux_command:
-            print('LockMsg.py is improperly setup.')
-            print('Use ls -la /usr/bin | grep screensaver-command')
+        #gnome
+        #cmd = subprocess.check_output(['dbus-send', '--print-reply=literal',
+        #                         '--dest=org.gnome.ScreenSaver',
+        #                         '/org/gnome/ScreenSaver',
+        #                         'org.gnome.ScreenSaver.GetActive'])
+
+        #cinnamon
+        #cmd = subprocess.check_output(['dbus-send', '--print-reply=literal',
+        #                         '--dest=org.cinnamon.ScreenSaver',
+        #                         '/org/cinnamon/ScreenSaver',
+        #                         'org.cinnamon.ScreenSaver.GetActive'])
+
+        #kde
+        #cmd = subprocess.check_output(['dbus-send', '--print-reply=literal',
+        #                         '--dest=org.kde.ScreenSaver',
+        #                         '/org/kde/ScreenSaver',
+        #                         'org.kde.ScreenSaver.GetActive'])
+
+        #other
+        #cmd = subprocess.check_output(['dbus-send', '--print-reply=literal',
+        #                         '--dest=org.freedesktop.ScreenSaver',
+        #                         '/org/freedesktop/ScreenSaver',
+        #                         'org.freedesktop.ScreenSaver.GetActive'])
+
+        cmd = cmd.decode('utf-8').strip()
+        if cmd.endswith('true'):
+            self.locked = True
         else:
-            cmd = subprocess.check_output([linux_command, '--query'], shell=False)
-            cmd = cmd.decode('utf-8').strip()
-            if cmd == 'The screensaver is active':
-                self.locked = True
-            else:
-                self.locked = False
+            self.locked = False
 
     def detect_mac(self, word, word_eol, userdata):
         gui_dict = Quartz.CGSessionCopyCurrentDictionary()
