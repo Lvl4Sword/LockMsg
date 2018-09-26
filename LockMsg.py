@@ -11,7 +11,7 @@ from ssl import Purpose
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '0.9.0'
+__module_version__ = '0.10.0'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
 
 # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
@@ -89,32 +89,21 @@ class Main():
             self.locked = False
 
     def detect_linux(self, word, word_eol, userdata):
-        #gnome
-        #cmd = subprocess.check_output(['dbus-send', '--print-reply=literal',
-        #                         '--dest=org.gnome.ScreenSaver',
-        #                         '/org/gnome/ScreenSaver',
-        #                         'org.gnome.ScreenSaver.GetActive'])
-
-        #cinnamon
-        #cmd = subprocess.check_output(['dbus-send', '--print-reply=literal',
-        #                         '--dest=org.cinnamon.ScreenSaver',
-        #                         '/org/cinnamon/ScreenSaver',
-        #                         'org.cinnamon.ScreenSaver.GetActive'])
-
-        #kde
-        #cmd = subprocess.check_output(['dbus-send', '--print-reply=literal',
-        #                         '--dest=org.kde.ScreenSaver',
-        #                         '/org/kde/ScreenSaver',
-        #                         'org.kde.ScreenSaver.GetActive'])
-
-        #other
-        #cmd = subprocess.check_output(['dbus-send', '--print-reply=literal',
-        #                         '--dest=org.freedesktop.ScreenSaver',
-        #                         '/org/freedesktop/ScreenSaver',
-        #                         'org.freedesktop.ScreenSaver.GetActive'])
-
-        cmd = cmd.decode('utf-8').strip()
-        if cmd.endswith('true'):
+        import dbus
+        session_bus = dbus.SessionBus()
+        screensaver_list = ['org.gnome.ScreenSaver',
+                            'org.cinnamon.ScreenSaver',
+                            'org.kde.screensaver',
+                            'org.freedesktop.ScreenSaver']
+        for each in screensaver_list:
+            try:
+                object_path = '/{0}'.format(each.replace('.', '/'))
+                get_object = session_bus.get_object(each, object_path)
+                get_interface = dbus.Interface(get_object, each)
+                status = bool(get_interface.GetActive())
+            except dbus.exceptions.DBusException:
+                pass
+        if status:
             self.locked = True
         else:
             self.locked = False
