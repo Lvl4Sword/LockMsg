@@ -11,12 +11,8 @@ from ssl import Purpose
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '0.12.0'
+__module_version__ = '0.12.1'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
-
-#!/usr/bin/env/python3
-
-import subprocess
 
 mac_script = """import Quartz
 
