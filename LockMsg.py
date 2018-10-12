@@ -11,10 +11,11 @@ from ssl import Purpose
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '0.12.1'
+__module_version__ = '0.12.2'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
 
 mac_script = """import Quartz
+import sys
 
 all_windows = Quartz.CGWindowListCopyWindowInfo(Quartz.kCGWindowListOptionOnScreenOnly, Quartz.kCGNullWindowID)
 
