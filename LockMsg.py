@@ -11,7 +11,7 @@ from ssl import Purpose
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '0.10.0'
+__module_version__ = '0.11.0'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
 
 # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
@@ -109,10 +109,14 @@ class Main():
             self.locked = False
 
     def detect_mac(self, word, word_eol, userdata):
-        gui_dict = Quartz.CGSessionCopyCurrentDictionary()
-        if gui_dict.get('CGSSessionScreenIsLocked') == 1:
-            self.locked = True
-        else:
+        detected_lockscreen = False
+        all_windows = Quartz.CGWindowListCopyWindowInfo(Quartz.kCGWindowListOptionOnScreenOnly,
+                                                        Quartz.kCGNullWindowID)
+        for x in all_windows:
+            if x["kCGWindowOwnerName"] == "loginwindow":
+                self.locked = True
+                detected_lockscreen = True
+        if not detected_lockscreen:
             self.locked = False
 
     def channel_action(self, word, word_eol, userdata):
