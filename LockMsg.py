@@ -11,7 +11,7 @@ from ssl import Purpose
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '0.12.2'
+__module_version__ = '0.12.3'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
 
 mac_script = """import Quartz
@@ -74,12 +74,10 @@ class Main():
 
     def detect_lock_screen(self, word, word_eol, userdata):
         if sys.platform.startswith('win'):
-            import ctypes
             self.detect_windows(word, word_eol, userdata)
         elif sys.platform.startswith('linux'):
             self.detect_linux(word, word_eol, userdata)
         elif sys.platform.startswith('darwin'):
-            import Quartz
             self.detect_mac(word, word_eol, userdata)
         else:
             self.locked = False
@@ -96,6 +94,7 @@ class Main():
         [self.friends_list.append(each.nick) for each in hexchat.get_list('notify')]
 
     def detect_windows(self, word, word_eol, userdata):
+        import ctypes
         user32 = ctypes.WinDLL('user32', use_last_error=True)
         result = user32.GetForegroundWindow()
         if result == 0:
