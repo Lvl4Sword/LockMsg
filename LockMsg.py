@@ -6,12 +6,11 @@ import subprocess
 import sys
 import time
 from email.mime.text import MIMEText
-from distutils.version import StrictVersion
 from ssl import Purpose
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '0.12.3'
+__module_version__ = '1.0.0'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
 
 mac_script = """import Quartz
@@ -271,7 +270,6 @@ class Main():
     def mail_this(self):
         subject = '[ALERT: IRC]'
         # typical values for text_subtype are plain, html, xml
-        text_subtype = 'plain'
         content = '{0}'.format(self.was_said)
         msg = MIMEText(content, _charset='utf-8')
         msg['Subject'] = subject
@@ -286,11 +284,6 @@ class Main():
         # https://docs.python.org/3/library/ssl.html#id7
         ssl_context.options &= ~ssl.OP_NO_TLSv1
         ssl_context.options &= ~ssl.OP_NO_TLSv1_1
-        try:
-            if StrictVersion(sys.version.split()[0]) >= StrictVersion('3.6.4'):
-                ssl_context.options &= ~ssl.OP_NO_TLSv1_2
-        except ValueError:
-            pass
         ssl_context.options &= ~ssl.OP_SINGLE_DH_USE
         ssl_context.options &= ~ssl.OP_SINGLE_ECDH_USE
         conn = smtplib.SMTP_SSL(smtp_server,
