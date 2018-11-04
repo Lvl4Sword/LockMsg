@@ -10,7 +10,7 @@ from ssl import Purpose
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '1.0.0'
+__module_version__ = '1.0.1'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
 
 mac_script = """import Quartz
@@ -269,7 +269,6 @@ class Main():
 
     def mail_this(self):
         subject = '[ALERT: IRC]'
-        # typical values for text_subtype are plain, html, xml
         content = '{0}'.format(self.was_said)
         msg = MIMEText(content, _charset='utf-8')
         msg['Subject'] = subject
