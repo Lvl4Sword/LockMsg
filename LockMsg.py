@@ -10,23 +10,8 @@ from ssl import Purpose
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '1.0.1'
+__module_version__ = '1.1.0'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
-
-mac_script = """import Quartz
-import sys
-
-all_windows = Quartz.CGWindowListCopyWindowInfo(Quartz.kCGWindowListOptionOnScreenOnly, Quartz.kCGNullWindowID)
-
-display_locked = False
-for x in all_windows:
-    if x["kCGWindowOwnerName"] == "loginwindow":
-        display_locked = True
-        break
-if display_locked:
-    sys.stdout.write('True')
-else:
-    sys.stdout.write('False')"""
 
 # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
 # used in format_message for self.current_time 
@@ -122,14 +107,9 @@ class Main():
             self.locked = False
 
     def detect_mac(self, word, word_eol, userdata):
-        sp = subprocess.run(["/usr/bin/python", "-"],
-            input=mac_script,
-            capture_output=True,
-            check=True,
-            encoding="utf_8",
-            env={"PYTHONIOENCODING": "utf_8"})
-
-        if sp.stdout == 'True':
+        import Quartz
+        session_dict = Quartz.CGSessionCopyCurrentDictionary()
+        if 'CGSSessionScreenIsLocked' in session_dict.keys():
             self.locked = True
         else:
             self.locked = False
