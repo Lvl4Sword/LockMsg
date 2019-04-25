@@ -10,7 +10,7 @@ from ssl import Purpose
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '1.2.0'
+__module_version__ = '1.3.0'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
 
 # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
@@ -256,14 +256,14 @@ class Main():
         ssl_context.verify_mode = ssl.CERT_REQUIRED
         ssl_context.check_hostname = True
         ssl_context.set_ciphers(cipher_choice)
-        ssl_context.options &= ~ssl.HAS_SNI
-        ssl_context.options &= ~ssl.OP_NO_COMPRESSION
+        ssl_context.options |= ssl.HAS_SNI
+        ssl_context.options |= ssl.OP_NO_COMPRESSION
         # No need to explicitally disable SSLv* as it's already been done
         # https://docs.python.org/3/library/ssl.html#id7
-        ssl_context.options &= ~ssl.OP_NO_TLSv1
-        ssl_context.options &= ~ssl.OP_NO_TLSv1_1
-        ssl_context.options &= ~ssl.OP_SINGLE_DH_USE
-        ssl_context.options &= ~ssl.OP_SINGLE_ECDH_USE
+        ssl_context.options |= ssl.OP_NO_TLSv1
+        ssl_context.options |= ssl.OP_NO_TLSv1_1
+        ssl_context.options |= ssl.OP_SINGLE_DH_USE
+        ssl_context.options |= ssl.OP_SINGLE_ECDH_USE
         conn = smtplib.SMTP_SSL(smtp_server,
                                 port=smtp_port,
                                 context=ssl_context)
