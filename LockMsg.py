@@ -10,7 +10,7 @@ from ssl import Purpose
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '1.1.0'
+__module_version__ = '1.2.0'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
 
 # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
@@ -45,6 +45,9 @@ cipher_choice = 'ECDHE-RSA-AES256-GCM-SHA384'
 # Bottom of https://en.wikipedia.org/wiki/SMTP_Authentication#Details has more
 # LOGIN types
 login_auth = 'PLAIN'
+
+# expecting gnome-screensaver-command, cinnamon-screensaver-command, etc
+linux_command = ''
 
 
 class Main():
@@ -87,24 +90,15 @@ class Main():
             self.locked = False
 
     def detect_linux(self, word, word_eol, userdata):
-        import dbus
-        session_bus = dbus.SessionBus()
-        screensaver_list = ['org.gnome.ScreenSaver',
-                            'org.cinnamon.ScreenSaver',
-                            'org.kde.screensaver',
-                            'org.freedesktop.ScreenSaver']
-        for each in screensaver_list:
-            try:
-                object_path = '/{0}'.format(each.replace('.', '/'))
-                get_object = session_bus.get_object(each, object_path)
-                get_interface = dbus.Interface(get_object, each)
-                status = bool(get_interface.GetActive())
-            except dbus.exceptions.DBusException:
-                pass
-        if status:
-            self.locked = True
+        if not linux_command:
+            print('LockMsg.py is improperly setup.')
+            print('Use ls -la /usr/bin | grep screensaver-command')
         else:
-            self.locked = False
+            check_screensaver = subprocess.check_output([linux_command, '--query']).decode()
+            if ' active' in check_screensaver:
+                self.locked = True
+            else:
+                self.locked = False
 
     def detect_mac(self, word, word_eol, userdata):
         import Quartz
@@ -115,15 +109,15 @@ class Main():
             self.locked = False
     
     def channel_action(self, word, word_eol, userdata):
-        self.detect_lock_screen(word, word_eol, userdata)
-        if self.locked:
-            if word[0] in self.friends_list:
-                try:
-                    if word[0].lower() in blacklisted['users']:
-                        pass
-                    elif word[0].lower() in blacklisted['channels'][self.current_channel]:
-                        pass
-                except KeyError:
+        if word[0] in self.friends_list:
+            if word[0].lower() in blacklisted['users']:
+                pass
+            try:
+                if word[0].lower() in blacklisted['channels'][self.current_channel]:
+                    pass
+            except KeyError:
+                self.detect_lock_screen(word, word_eol, userdata)
+                if self.locked:
                     self.was_said = '[{0}] [{1}] [ACTION] {2}: {3}'.format(self.formatted_time,
                                                                            self.current_channel,
                                                                            word[0],
@@ -131,15 +125,15 @@ class Main():
                     self.mail_this()
 
     def channel_action_hilight(self, word, word_eol, userdata):
-        self.detect_lock_screen(word, word_eol, userdata)
-        if self.locked:
-            if word[0] in self.friends_list:
-                try:
-                    if word[0].lower() in blacklisted['users']:
-                        pass
-                    elif word[0].lower() in blacklisted['channels'][self.current_channel]:
-                        pass
-                except KeyError:
+        if word[0] in self.friends_list:
+            if word[0].lower() in blacklisted['users']:
+                pass
+            try:
+                if word[0].lower() in blacklisted['channels'][self.current_channel]:
+                    pass
+            except KeyError:
+                self.detect_lock_screen(word, word_eol, userdata)
+                if self.locked:
                     self.was_said = '[{0}] [{1}] [ACTION] {2}: {3}'.format(self.formatted_time,
                                                                            self.current_channel,
                                                                            word[0],
@@ -147,14 +141,14 @@ class Main():
                     self.mail_this()
 
     def channel_message(self, word, word_eol, userdata):
-        self.detect_lock_screen(word, word_eol, userdata)
-        if self.locked:
-            if word[0] in self.friends_list:
-                if word[0].lower() not in blacklisted['users']:
-                    try:
-                        if word[0].lower() in blacklisted['channels'][self.current_channel]:
-                            pass
-                    except KeyError:
+        if word[0] in self.friends_list:
+            if word[0].lower() not in blacklisted['users']:
+                try:
+                    if word[0].lower() in blacklisted['channels'][self.current_channel]:
+                        pass
+                except KeyError:
+                    self.detect_lock_screen(word, word_eol, userdata)
+                    if self.locked:
                         self.was_said = '[{0}] [{1}] {2}: {3}'.format(self.formatted_time,
                                                                       self.current_channel,
                                                                       word[0],
@@ -162,18 +156,19 @@ class Main():
                         self.mail_this()
 
     def channel_msg_hilight(self, word, word_eol, userdata):
-        self.detect_lock_screen(word, word_eol, userdata)
-        if self.locked:
-            if word[0].lower() not in blacklisted['users']:
-                try:
-                    if word[0].lower() in blacklisted['channels'][self.current_channel]:
-                        pass
-                except KeyError:
+        if word[0].lower() not in blacklisted['users']:
+            try:
+                if word[0].lower() in blacklisted['channels'][self.current_channel]:
+                    pass
+            except KeyError:
+                self.detect_lock_screen(word, word_eol, userdata)
+                if self.locked:
                     self.was_said = '[{0}] [{1}] {2}: {3}'.format(self.formatted_time,
                                                                   self.current_channel,
                                                                   word[0],
                                                                   hexchat.strip(word[1], -1, 3))
                     self.mail_this()
+
 
     def connected(self, word, word_eol, userdata):
         self.detect_lock_screen(word, word_eol, userdata)
@@ -182,70 +177,74 @@ class Main():
             self.mail_this()
 
     def join(self, word, word_eol, userdata):
-        self.detect_lock_screen(word, word_eol, userdata)
-        if self.locked:
-            if word[0] not in self.friends_list:
-                if any([word[2].endswith(each.lower()) for each in login_cloaks]):
+        if word[0] not in self.friends_list:
+            if any([word[2].endswith(each.lower()) for each in login_cloaks]):
+                self.detect_lock_screen(word, word_eol, userdata)
+                if self.locked:
                     self.was_said = '[{0}] [JOINED] {1} HOST: {2}'.format(self.formatted_time,
                                                                           word[0],
                                                                           word[2])
                     self.mail_this()
 
     def notify_online(self, word, word_eol, userdata):
-        self.detect_lock_screen(word, word_eol, userdata)
-        if self.locked:
-            if word[0].lower() not in blacklisted['channels']['notify']:
+        if word[0].lower() not in blacklisted['channels']['notify']:
+            self.detect_lock_screen(word, word_eol, userdata)
+            if self.locked:
                 self.was_said = '[{0}] [JOINED] {1}'.format(self.formatted_time,
                                                             word[0])
                 self.mail_this()
 
     def private_action_to_dialog(self, word, word_eol, userdata):
-        self.detect_lock_screen(word, word_eol, userdata)
-        if self.locked:
-            if word[0].lower() not in blacklisted['users']:
+        if word[0].lower() not in blacklisted['users']:
+            self.detect_lock_screen(word, word_eol, userdata)
+            if self.locked:
                 self.was_said = '[{0}] [PM] [ACTION] {1}: {2}'.format(self.formatted_time,
                                                                       word[0],
                                                                       hexchat.strip(word[1], -1, 3))
+
                 self.mail_this()
 
     def private_message_hilight(self, word, word_eol, userdata):
-        self.detect_lock_screen(word, word_eol, userdata)
-        if self.locked:
-            if word[0].lower() not in blacklisted['users']:
+        if word[0].lower() not in blacklisted['users']:
+            self.detect_lock_screen(word, word_eol, userdata)
+            if self.locked:
                 self.was_said = '[{0}] [PM] {1}: {2}'.format(self.formatted_time,
                                                              word[0],
                                                              hexchat.strip(word[1], -1, 3))
                 self.mail_this()
 
     def private_message_to_dialog(self, word, word_eol, userdata):
-        self.detect_lock_screen(word, word_eol, userdata)
-        if self.locked:
-            if word[0].lower() not in blacklisted['users']:
+        if word[0].lower() not in blacklisted['users']:
+            self.detect_lock_screen(word, word_eol, userdata)
+            if self.locked:
                 self.was_said = '[{0}] [PM] {1}: {2}'.format(self.formatted_time,
                                                              word[0],
                                                              hexchat.strip(word[1], -1, 3))
                 self.mail_this()
 
     def quit(self, word, word_eol, userdata):
-        self.detect_lock_screen(word, word_eol, userdata)
-        if self.locked:
-            if word[0].lower() not in blacklisted['users']:
-                try:
-                    if word[0].lower() in blacklisted['channels'][self.current_channel]:
-                        pass
-                except KeyError:
-                    if any([word[2].endswith(each.lower()) for each in login_cloaks]):
-                        if word[0] not in self.friends_list:
+        if word[0].lower() not in blacklisted['users']:
+            try:
+                if word[0].lower() in blacklisted['channels'][self.current_channel]:
+                    pass
+            except KeyError:
+                if any([word[2].endswith(each.lower()) for each in login_cloaks]):
+                    if word[0] not in self.friends_list:
+                        self.detect_lock_screen(word, word_eol, userdata)
+                        if self.locked:
                             self.was_said = '[{0}] [QUIT] {1} HOST: {2}'.format(self.formatted_time,
                                                                                 word[0],
                                                                                 word[2])
                             self.mail_this()
+
                     else:
                         if word[0] in self.friends_list:
                             if word[0].lower() not in blacklisted['channels']['notify']:
-                                self.was_said = '[{0}] [QUIT] {1}'.format(self.formatted_time,
-                                                                          word[0]) 
-                                self.mail_this()
+                                self.detect_lock_screen(word, word_eol, userdata)
+                                if self.locked:
+                                    self.was_said = '[{0}] [QUIT] {1}'.format(self.formatted_time,
+                                                                              word[0]) 
+                                    self.mail_this()
 
     def mail_this(self):
         subject = '[ALERT: IRC]'
