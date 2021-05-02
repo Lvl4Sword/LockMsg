@@ -5,12 +5,15 @@ import ssl
 import subprocess
 import sys
 import time
-from email.mime.text import MIMEText
+from email.headerregistry import Address
+from email.message import EmailMessage
 from ssl import Purpose
+from jinja2 import Template
+
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '2.0.0'
+__module_version__ = '3.0.0'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
 
 # cloaks to pay attention to
@@ -28,12 +31,14 @@ allowlisted_channels = ['#example']
 allowlisted_users = ['example']
 # users in a specific channel you want everything from
 allowlisted_channel_users = {'#example': 'example'}
+# receive an e-mail when the bot connects
+connect_email = True
 
 # E-mail
 smtp_server = 'smtp.example.com'
 smtp_port = 465
 sender = 'sender@example.com'
-destination = ['destination@example.com']
+destination = {'destination@example.com': 'Example User'}
 sender_password = 'P@55w3rd!'
 cipher_choice = 'ECDHE-RSA-AES256-GCM-SHA384'
 # LOGIN PLAIN doesn't work for Outlook:
@@ -81,12 +86,23 @@ SCREENSAVERS = {'FREEDESKTOP_SCREENSAVER': {'command': FREEDESKTOP_SCREENSAVER},
                 'GNOME_SCREENSAVER': {'command': GNOME_SCREENSAVER},
                 'GNOME3_SCREENSAVER': {'command': GNOME3_SCREENSAVER},
                 'KDE_SCREENSAVER': {'command': KDE_SCREENSAVER}}
+EMAIL_TEMPLATE = """<html>
+    <head></head>
+    <body>
+        <b>Time:</b> {{current_time}}</br>
+        {% if current_channel is not none %}<b>Current Channel</b>: {{current_channel}}</br>{% endif %}
+        {% if what is not none %}<b>Type</b>: {{what}}</br>{% endif %}
+        {% if username is not none %}<b>Username</b>: {{username}}</br>{% endif %}
+        {% if cloak is not none %}<b>Cloak</b>: {{cloak}}</br>{% endif %}
+        {% if message is not none %}<b>Message</b>: {{message}}{% endif %}
+    <body>
+</html>
+"""
 
 
 class Main:
     def __init__(self):
         self.linux_screensaver_command = None
-        self.the_message = None
         self.locked = False
         self.friends_list = [each.nick for each in hexchat.get_list('notify')]
 
@@ -229,8 +245,9 @@ class Main:
         else:
             return None
 
-    def execute(self, username, cloak, the_type):
+    def execute(self, username, cloak, the_type, what, message):
         check_locked = False
+        current_channel = None
         if the_type != 'connected':
             username = username.lower()
 
@@ -255,15 +272,7 @@ class Main:
                             check_locked = True
                     elif the_type == 'quit':
                         if important_cloak:
-                            if username not in self.friends_list:
-                                self.the_message = '[{0}] [QUIT] {1} HOST: {2}'.format(time.strftime('%Y-%m-%d %I:%M:%S%p', time.localtime()),
-                                                                                       username,
-                                                                                       cloak)
-                                check_locked = True
-                            else:
-                                self.the_message = '[{0}] [QUIT] {1}'.format(time.strftime('%Y-%m-%d %I:%M:%S%p', time.localtime()),
-                                                                             username)
-                                check_locked = True
+                            check_locked = True
                     elif the_type == 'channel':
                         check_locked = True
                     elif the_type == 'part':
@@ -271,114 +280,121 @@ class Main:
                 if the_type in ['hilight', 'pm']:
                     check_locked = True
         else:
-            check_locked = True
+            if connect_email:
+                check_locked = True
 
         if check_locked:
             self.detect_lock_screen()
             if self.locked:
-                self.mail_this()
+                self.prep_mail(current_channel, what, username, cloak, message)
 
     def channel_action(self, word, word_eol, userdata):
         username = word[0]
         cloak = None
-        self.the_message = '[{0}] [{1}] [ACTION] {2}: {3}'.format(time.strftime('%Y-%m-%d %I:%M:%S%p', time.localtime()),
-                                                                  hexchat.get_info('channel'),
-                                                                  word[0],
-                                                                  hexchat.strip(word[1], -1, 3))
-        self.execute(username, cloak, 'channel')
+        what = 'ACTION'
+        message = hexchat.strip(word[1], -1, 3)
+        self.execute(username, cloak, 'channel', what, message)
 
     def channel_message(self, word, word_eol, userdata):
         username = word[0]
         cloak = None
-        self.the_message = '[{0}] [{1}] {2}: {3}'.format(time.strftime('%Y-%m-%d %I:%M:%S%p', time.localtime()),
-                                                         hexchat.get_info('channel'),
-                                                         word[0],
-                                                         hexchat.strip(word[1], -1, 3))
-        self.execute(username, cloak, 'channel')
+        what = None
+        message = hexchat.strip(word[1], -1, 3)
+        self.execute(username, cloak, 'channel', what, message)
 
     def connected(self, word, word_eol, userdata):
         username = None
         cloak = None
-        self.the_message = '[{0}] [CONNECTED]'.format(time.strftime('%Y-%m-%d %I:%M:%S%p', time.localtime()))
-        self.execute(username, cloak, 'connected')
+        what = 'CONNECTED'
+        message = None
+        self.execute(username, cloak, 'connected', what, message)
 
     def channel_action_hilight(self, word, word_eol, userdata):
         username = word[0]
         cloak = None
-        self.the_message = '[{0}] [{1}] [ACTION] {2}: {3}'.format(time.strftime('%Y-%m-%d %I:%M:%S%p', time.localtime()),
-                                                                  hexchat.get_info('channel'),
-                                                                  word[0],
-                                                                  hexchat.strip(word[1], -1, 3))
-        self.execute(username, cloak, 'hilight')
+        what = 'ACTION'
+        message = hexchat.strip(word[1], -1, 3)
+        self.execute(username, cloak, 'hilight', what, message)
 
     def channel_msg_hilight(self, word, word_eol, userdata):
         username = word[0]
         cloak = None
-        self.the_message = '[{0}] [{1}] {2}: {3}'.format(time.strftime('%Y-%m-%d %I:%M:%S%p', time.localtime()),
-                                                         hexchat.get_info('channel'),
-                                                         word[0],
-                                                         hexchat.strip(word[1], -1, 3))
-        self.execute(username, cloak, 'hilight')
+        what = None
+        message = hexchat.strip(word[1], -1, 3)
+        self.execute(username, cloak, 'hilight', what, message)
 
     def join(self, word, word_eol, userdata):
         username = word[0]
         cloak = word[2]
-        self.the_message = '[{0}] [JOINED] {1} HOST: {2}'.format(time.strftime('%Y-%m-%d %I:%M:%S%p', time.localtime()),
-                                                                 username,
-                                                                 cloak)
-        self.execute(username, cloak, 'joined')
+        what = 'JOINED'
+        message = None
+        self.execute(username, cloak, 'joined', what, message)
 
     def notify_online(self, word, word_eol, userdata):
         username = word[0]
         cloak = word[2]
-        self.the_message = '[{0}] [JOINED] {1}'.format(time.strftime('%Y-%m-%d %I:%M:%S%p', time.localtime()),
-                                                       word[0])
-        self.execute(username, cloak, 'notify')
+        what = 'JOINED'
+        message = None
+        self.execute(username, cloak, 'notify', what, message)
 
     def private_action_to_dialog(self, word, word_eol, userdata):
         username = word[0]
         cloak = None
-        self.the_message = '[{0}] [PM] [ACTION] {1}: {2}'.format(time.strftime('%Y-%m-%d %I:%M:%S%p', time.localtime()),
-                                                                 word[0],
-                                                                 hexchat.strip(word[1], -1, 3))
-        self.execute(username, cloak, 'pm')
+        what = 'ACTION'
+        message = hexchat.strip(word[1], -1, 3)
+        self.execute(username, cloak, 'pm', what, message)
 
     def private_message_hilight(self, word, word_eol, userdata):
         username = word[0]
         cloak = None
-        self.the_message = '[{0}] [PM] {1}: {2}'.format(time.strftime('%Y-%m-%d %I:%M:%S%p', time.localtime()),
-                                                        word[0],
-                                                        hexchat.strip(word[1], -1, 3))
-        self.execute(username, cloak, 'pm')
+        what = 'PM'
+        message = hexchat.strip(word[1], -1, 3)
+        self.execute(username, cloak, 'pm', what, message)
 
     def private_message_to_dialog(self, word, word_eol, userdata):
         username = word[0]
         cloak = None
-        self.the_message = '[{0}] [PM] {1}: {2}'.format(time.strftime('%Y-%m-%d %I:%M:%S%p', time.localtime()),
-                                                        word[0],
-                                                        hexchat.strip(word[1], -1, 3))
-        self.execute(username, cloak, 'pm')
+        what = 'PM'
+        message = hexchat.strip(word[1], -1, 3)
+        self.execute(username, cloak, 'pm', what, message)
 
     def quit(self, word, word_eol, userdata):
         username = word[0]
         cloak = word[2]
-        self.execute(username, cloak, 'quit')
+        what = 'QUIT'
+        message = None
+        self.execute(username, cloak, 'quit', what, message)
 
     def part(self, word, word_eol, userdata):
         username = word[0]
         cloak = word[1]
-        self.the_message = '[{0}] [LEAVING] {1}'.format(time.strftime('%Y-%m-%d %I:%M:%S%p', time.localtime()),
-                                                        username)
-        self.execute(username, cloak, 'part')
+        what = 'LEAVING'
+        message = None
+        self.execute(username, cloak, 'part', what, message)
 
-    def mail_this(self):
-        subject = '[ALERT: IRC]'
-        content = '{0}'.format(self.the_message)
-        msg = MIMEText(content, _charset='utf-8')
-        msg['Subject'] = subject
+    def prep_mail(self, current_channel, what, username, cloak, message):
+        current_time = time.strftime('%Y-%m-%d %I:%M:%S%p', time.localtime())
+        msg = EmailMessage()
+        msg['Subject'] = '[ALERT: IRC]'
         msg['From'] = sender
+        data = {'current_time': current_time,
+                'current_channel': current_channel,
+                'what': what,
+                'username': username,
+                'cloak': cloak,
+                'message': message}
+        msg['To'] = [Address(destination[email], email.split('@')[0], email.split('@')[1]) for email in destination]
+        # Not sure if this is actually needed since we're using add_alternative
+        # https://docs.python.org/3/library/email.message.html#email.message.EmailMessage.add_alternative
+        msg.set_content = ''
+        prep_template = Template(EMAIL_TEMPLATE)
+        msg.add_alternative(prep_template.render(data), subtype='html')
+        self.mail_this(msg)
+
+    def mail_this(self, msg):
         ssl_context = ssl.create_default_context(purpose=Purpose.SERVER_AUTH)
-        ssl_context.verify_mode = ssl.CERT_REQUIRED
+        # No need to set verify_mode, it's done for us:
+        # https://docs.python.org/3/library/ssl.html#ssl.create_default_context
         ssl_context.check_hostname = True
         ssl_context.set_ciphers(cipher_choice)
         ssl_context.options |= ssl.HAS_SNI
@@ -389,16 +405,10 @@ class Main:
         ssl_context.options |= ssl.OP_NO_TLSv1_1
         ssl_context.options |= ssl.OP_SINGLE_DH_USE
         ssl_context.options |= ssl.OP_SINGLE_ECDH_USE
-        conn = smtplib.SMTP_SSL(smtp_server,
-                                port=smtp_port,
-                                context=ssl_context)
-        conn.esmtp_features['auth'] = login_auth
-        conn.login(sender, sender_password)
-        try:
-            for each in destination:
-                conn.sendmail(sender, each, msg.as_string())
-        finally:
-            conn.quit()
+        with smtplib.SMTP_SSL(smtp_server, port=smtp_port, context=ssl_context) as conn:
+            conn.esmtp_features['auth'] = login_auth
+            conn.login(sender, sender_password)
+            conn.send_message(msg)
         return hexchat.EAT_NONE
 
 
