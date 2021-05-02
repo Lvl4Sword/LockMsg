@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import hexchat
 import smtplib
 import ssl
 import subprocess
@@ -8,6 +7,7 @@ import time
 from email.headerregistry import Address
 from email.message import EmailMessage
 from ssl import Purpose
+import hexchat
 try:
     from jinja2 import Template
 except ModuleNotFoundError:
@@ -18,7 +18,7 @@ else:
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '3.1.0'
+__module_version__ = '3.1.2'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
 
 # cloaks to pay attention to
