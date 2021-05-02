@@ -8,12 +8,17 @@ import time
 from email.headerregistry import Address
 from email.message import EmailMessage
 from ssl import Purpose
-from jinja2 import Template
+try:
+    from jinja2 import Template
+except ModuleNotFoundError:
+    jinja_found = False
+else:
+    jinja_found = True
 
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '3.0.0'
+__module_version__ = '3.1.0'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
 
 # cloaks to pay attention to
@@ -86,7 +91,7 @@ SCREENSAVERS = {'FREEDESKTOP_SCREENSAVER': {'command': FREEDESKTOP_SCREENSAVER},
                 'GNOME_SCREENSAVER': {'command': GNOME_SCREENSAVER},
                 'GNOME3_SCREENSAVER': {'command': GNOME3_SCREENSAVER},
                 'KDE_SCREENSAVER': {'command': KDE_SCREENSAVER}}
-EMAIL_TEMPLATE = """<html>
+JINJA_EMAIL_TEMPLATE = """<html>
     <head></head>
     <body>
         <b>Time:</b> {{current_time}}</br>
@@ -99,9 +104,15 @@ EMAIL_TEMPLATE = """<html>
 </html>
 """
 
+NO_JINJA_EMAIL_TEMPLATE = """<html>
+    <head></head>
+    <body>
+        <b>Time:</b> {current_time}</br>\n
+"""
 
 class Main:
     def __init__(self):
+        self.email_template = None
         self.linux_screensaver_command = None
         self.locked = False
         self.friends_list = [each.nick for each in hexchat.get_list('notify')]
@@ -137,6 +148,7 @@ class Main:
             self.locked = False
 
     def detect_linux(self):
+        time.sleep(2)
         try:
             check_screensaver = subprocess.check_output(self.linux_screensaver_command).decode().split()[-1]
         except TypeError:
@@ -377,18 +389,34 @@ class Main:
         msg = EmailMessage()
         msg['Subject'] = '[ALERT: IRC]'
         msg['From'] = sender
-        data = {'current_time': current_time,
-                'current_channel': current_channel,
-                'what': what,
-                'username': username,
-                'cloak': cloak,
-                'message': message}
         msg['To'] = [Address(destination[email], email.split('@')[0], email.split('@')[1]) for email in destination]
         # Not sure if this is actually needed since we're using add_alternative
         # https://docs.python.org/3/library/email.message.html#email.message.EmailMessage.add_alternative
         msg.set_content = ''
-        prep_template = Template(EMAIL_TEMPLATE)
-        msg.add_alternative(prep_template.render(data), subtype='html')
+        if not jinja_found:
+            self.email_template = NO_JINJA_EMAIL_TEMPLATE
+            if current_channel is not None:
+                self.email_template += f"        <b>Current Channel</b>: {current_channel}</br>\n"
+            if what is not None:
+                self.email_template += f"        <b>Type</b>: {what}</br>\n"
+            if username is not None:
+                self.email_template += f"        <b>Username</b>: {{username}}</br>\n"
+            if cloak is not None:
+                self.email_template += f"        <b>Cloak</b>: {{cloak}}</br>\n"
+            if message is not None:
+                self.email_template += f"        <b>Message</b>: {message}\n"
+            email_template += "    <body>\n" + "</html>"
+            msg.add_alternative(email_template, subtype='html')
+        else:
+            self.email_template = JINJA_EMAIL_TEMPLATE
+            data = {'current_time': current_time,
+                    'current_channel': current_channel,
+                    'what': what,
+                    'username': username,
+                    'cloak': cloak,
+                    'message': message}
+            prep_template = Template(self.email_template)
+            msg.add_alternative(prep_template.render(data), subtype='html')
         self.mail_this(msg)
 
     def mail_this(self, msg):
