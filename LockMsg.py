@@ -148,7 +148,6 @@ class Main:
             self.locked = False
 
     def detect_linux(self):
-        time.sleep(2)
         try:
             check_screensaver = subprocess.check_output(self.linux_screensaver_command).decode().split()[-1]
         except TypeError:
