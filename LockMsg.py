@@ -18,7 +18,7 @@ else:
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '3.2.0'
+__module_version__ = '3.3.0'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
 
 # cloaks to pay attention to
@@ -404,8 +404,8 @@ class Main:
                 self.email_template += f"        <b>Cloak</b>: {{cloak}}</br>\n"
             if message is not None:
                 self.email_template += f"        <b>Message</b>: {message}\n"
-            email_template += "    <body>\n" + "</html>"
-            msg.add_alternative(email_template, subtype='html')
+            self.email_template += "    <body>\n" + "</html>"
+            msg.add_alternative(self.email_template, subtype='html')
         else:
             self.email_template = JINJA_EMAIL_TEMPLATE
             data = {'current_time': current_time,
