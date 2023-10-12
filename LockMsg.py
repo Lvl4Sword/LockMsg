@@ -18,7 +18,7 @@ else:
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '3.3.0'
+__module_version__ = '3.4.0'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
 
 # cloaks to pay attention to
@@ -55,6 +55,14 @@ cipher_choice = 'ECDHE-RSA-AES256-GCM-SHA384'
 login_auth = 'PLAIN'
 
 
+CINNAMON_SCREENSAVER = ['dbus-send',
+                        '--session',
+                        '--dest=org.cinnamon.ScreenSaver',
+                        '--type=method_call',
+                        '--print-reply',
+                        '--reply-timeout=1000',
+                        '/org/cinnamon/ScreenSaver',
+                        'org.cinnamon.ScreenSaver.GetActive']
 FREEDESKTOP_SCREENSAVER = ['dbus-send',
                            '--session',
                            '--dest=org.freedesktop.ScreenSaver',
@@ -87,7 +95,8 @@ KDE_SCREENSAVER = ['dbus-send',
                    '--reply-timeout=1000',
                    '/ScreenSaver',
                    'org.freedesktop.ScreenSaver.GetActive']
-SCREENSAVERS = {'FREEDESKTOP_SCREENSAVER': {'command': FREEDESKTOP_SCREENSAVER},
+SCREENSAVERS = {'CINNAMON_SCREENSAVER': {'command': CINNAMON_SCREENSAVER},
+                'FREEDESKTOP_SCREENSAVER': {'command': FREEDESKTOP_SCREENSAVER},
                 'GNOME_SCREENSAVER': {'command': GNOME_SCREENSAVER},
                 'GNOME3_SCREENSAVER': {'command': GNOME3_SCREENSAVER},
                 'KDE_SCREENSAVER': {'command': KDE_SCREENSAVER}}
