@@ -18,7 +18,7 @@ else:
 
 __module_name__ = 'LockMsg'
 __module_author__ = 'Lvl4Sword'
-__module_version__ = '3.4.0'
+__module_version__ = '3.5.0'
 __module_description__ = 'Detects Linux/Windows/Mac lockscreen and e-mails messages'
 
 # cloaks to pay attention to
@@ -103,12 +103,12 @@ SCREENSAVERS = {'CINNAMON_SCREENSAVER': {'command': CINNAMON_SCREENSAVER},
 JINJA_EMAIL_TEMPLATE = """<html>
     <head></head>
     <body>
-        <b>Time:</b> {{current_time}}</br>
-        {% if current_channel is not none %}<b>Current Channel</b>: {{current_channel}}</br>{% endif %}
-        {% if what is not none %}<b>Type</b>: {{what}}</br>{% endif %}
-        {% if username is not none %}<b>Username</b>: {{username}}</br>{% endif %}
-        {% if cloak is not none %}<b>Cloak</b>: {{cloak}}</br>{% endif %}
-        {% if message is not none %}<b>Message</b>: {{message}}{% endif %}
+        {% if current_time is not none %}<b>Time:</b> {current_time}</br>{% endif %}
+        {% if current_channel is not none %}<b>Current Channel</b>: {current_channel}</br>{% endif %}
+        {% if what is not none %}<b>Type</b>: {what}</br>{% endif %}
+        {% if username is not none %}<b>Username</b>: {username}</br>{% endif %}
+        {% if cloak is not none %}<b>Cloak</b>: {cloak}</br>{% endif %}
+        {% if message is not none %}<b>Message</b>: {message}{% endif %}
     <body>
 </html>
 """
@@ -116,13 +116,12 @@ JINJA_EMAIL_TEMPLATE = """<html>
 NO_JINJA_EMAIL_TEMPLATE = """<html>
     <head></head>
     <body>
-        <b>Time:</b> {current_time}</br>\n
 """
 
 class Main:
     def __init__(self):
         self.email_template = None
-        self.linux_screensaver_command = None
+        self.linux_screensaver_command = CINNAMON_SCREENSAVER
         self.locked = False
         self.friends_list = [each.nick for each in hexchat.get_list('notify')]
 
@@ -403,14 +402,16 @@ class Main:
         msg.set_content = ''
         if not jinja_found:
             self.email_template = NO_JINJA_EMAIL_TEMPLATE
+            if current_time is not None:
+                self.email_template += f"        <b>Time:</b> {current_time}</br>\n"
             if current_channel is not None:
                 self.email_template += f"        <b>Current Channel</b>: {current_channel}</br>\n"
             if what is not None:
                 self.email_template += f"        <b>Type</b>: {what}</br>\n"
             if username is not None:
-                self.email_template += f"        <b>Username</b>: {{username}}</br>\n"
+                self.email_template += f"        <b>Username</b>: {username}</br>\n"
             if cloak is not None:
-                self.email_template += f"        <b>Cloak</b>: {{cloak}}</br>\n"
+                self.email_template += f"        <b>Cloak</b>: {cloak}</br>\n"
             if message is not None:
                 self.email_template += f"        <b>Message</b>: {message}\n"
             self.email_template += "    <body>\n" + "</html>"
